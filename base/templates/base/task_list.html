@@ -1,0 +1,318 @@
+
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+<div class="login-container">
+    <div class="login-card">
+        <div class="header-bar">
+            <div>
+                <h1>Hello {{ request.user|title }}</h1>
+                <h3 style="margin:0">You have <i>{{ count }}</i> incomplete task{{ count|pluralize:"s" }}</h3>
+            </div>
+
+            {% if request.user.is_authenticated %}
+                <form method="POST" action="{% url 'logout' %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="logout-button">
+                        Logout
+                    </button>
+                </form>
+            {% else %}
+                <a href="{% url 'login' %}">Login</a>
+            {% endif %}
+        </div>
+
+        <div id="search-add-wrapper">
+            <form method="GET" style="display: flex;">
+                <input type="text" name="search-area" placeholder="Search your task" value="{{ search_input }}">
+                <input class="button" type="submit" value="Search">
+            </form>
+            {% if tasks|length > 0 %}
+                <a id="add-link" href="{% url 'task-create' %}">&#x2b;</a>
+            {% endif %}
+        </div>
+
+        <!-- Hidden form. Form submits new item positions -->
+        <form style="display: none;" id="reorderForm" method="post" action="{% url 'task-reorder' %}">
+            {% csrf_token %}
+            <input type="hidden" id="positionInput" name="position">
+        </form>
+
+        <div id="tasklist" class="task-items-wrapper">
+            {% for task in tasks %}
+                <div class="task-wrapper" data-position="{{ task.pk }}">
+                    <div class="task-title">
+                        {% if task.complete %}
+                            <div class="task-complete-icon"></div>
+                            <i><s><a href="{% url 'task-update' task.id %}">{{ task }}</a></s></i>
+                        {% else %}
+                            <div class="task-incomplete-icon"></div>
+                            <a href="{% url 'task-update' task.id %}">{{ task }}</a>
+                        {% endif %}
+                    </div>
+                    <div class="task-controls">
+                        <a class="delete-link" href="{% url 'task-delete' task.id %}">&#215;</a>
+                        <span class="handle">&nbsp;&#10247;</span>
+                    </div>
+                </div>
+            {% empty %}
+                <div style="text-align: center; padding-bottom: 10px; line-height: 1em;">
+                    <h3>No new tasks are created.</h3>
+                    <h3>Create a <a style="text-decoration: none; color: #e53935;" href="{% url 'task-create' %}">New task</a>!</h3>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+    var taskList = document.getElementById("tasklist");
+    var reorderForm = document.getElementById("reorderForm");
+    var positionInput = document.getElementById("positionInput");
+
+    let sortable = Sortable.create(taskList, {
+        handle: '.handle',
+        ghostClass: 'dropArea',
+        chosenClass: 'selectedTask',
+    });
+
+    function reordering() {
+        const rows = document.getElementsByClassName("task-wrapper");
+        let pos = [];
+        for (let row of rows) {
+            pos.push(row.dataset.position);
+        }
+        console.log(pos.join(","));
+        positionInput.value = pos.join(',');
+        reorderForm.submit();
+    }
+
+    document.ondrop = reordering
+</script>
+
+<style>
+    /* Include Google Font for Handwritten style */
+    @import url('https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap');
+
+    /* Reset body */
+    body {
+        font-family: 'Roboto', sans-serif;
+        margin: 0;
+        padding: 0;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: #f5f5dc; /* Light beige for a "paper" background */
+        color: #333;
+    }
+
+    /* Center the task list */
+    .login-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
+    }
+
+    /* Task list card styling */
+    .login-card {
+        width: 650px;
+        padding: 30px;
+        background: repeating-linear-gradient(
+            0deg,
+            #ffffff,
+            #ffffff 39px,
+            #ddd 40px
+        ); /* Paper lines */
+        border-radius: 12px;
+        text-align: center;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        border: 1px solid #ccc;
+        position: relative;
+    }
+
+    /* Paper effect: Add a pencil element */
+    .login-card:before {
+        content: '';
+        position: absolute;
+        width: 100px;
+        height: 10px;
+        background: linear-gradient(to right, #ffcc00, #ff9900);
+        border: 2px solid #333;
+        border-radius: 50px;
+        top: -15px;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+
+    /* Header inside the card */
+    .login-card .header-bar {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 20px;
+    }
+
+    .login-card .header-bar a {
+        font-size: 18px;
+        font-weight: bold;
+        color: #333;
+        text-decoration: none;
+        transition: color 0.3s ease;
+    }
+
+    .login-card .header-bar a:hover {
+        color: #ff9900;
+    }
+
+    /* Task items styling */
+    .task-items-wrapper {
+        padding: 20px 0;
+    }
+
+    .task-wrapper {
+        background-color: #ffffff;
+        margin: 10px 0;
+        padding: 15px;
+        border-radius: 10px;
+        border: 1px solid #ddd;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .task-title {
+        font-size: 18px;
+    }
+
+    .task-complete-icon, .task-incomplete-icon {
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        margin-right: 10px;
+        display: inline-block;
+    }
+
+    .task-complete-icon {
+        background-color: #4caf50;
+    }
+
+    .task-incomplete-icon {
+        background-color: #f44336;
+    }
+
+    /* Task controls */
+    .task-controls {
+        display: flex;
+        align-items: center;
+    }
+
+    .delete-link {
+        font-size: 20px;
+        color: #f44336;
+        cursor: pointer;
+        text-decoration: none;
+    }
+
+    .delete-link:hover {
+        text-decoration: underline;
+    }
+
+    .handle {
+        cursor: grab;
+    }
+
+    /* Search and add buttons */
+    .button {
+        background: linear-gradient(to bottom, #ffcc00, #ff9900); /* Pencil color */
+        color: #333;
+        border: none;
+        padding: 12px 25px;
+        cursor: pointer;
+        border-radius: 30px;
+        font-size: 16px;
+        transition: all 0.3s ease-in-out;
+        border: 2px solid #333;
+        position: relative;
+    }
+
+    .button:hover {
+        transform: scale(1.05);
+    }
+
+    .button:after {
+        content: '';
+        position: absolute;
+        right: -15px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 15px;
+        height: 15px;
+        background: #fff;
+        border: 2px solid #333;
+        border-radius: 50%;
+    }
+
+    /* Add task link */
+    #add-link {
+        font-size: 30px;
+        color: #4caf50;
+        text-decoration: none;
+        margin-top: 10px;
+        display: block;
+        text-align: center;
+    }
+
+    #add-link:hover {
+        color: #388e3c;
+    }
+
+    /* Adjust search bar size */
+    #search-add-wrapper form input[type="text"] {
+        width: 100%; /* Make the search bar take the full width of the container */
+        padding: 12px 15px; /* Increase the padding to make it larger */
+        font-size: 16px; /* Adjust the font size */
+        border-radius: 30px; /* Rounded corners */
+        border: 2px solid #ccc; /* Border color */
+        margin-right: 10px; /* Space between the input box and the submit button */
+        box-sizing: border-box; /* Ensure padding doesn't affect the width */
+    }
+
+    #search-add-wrapper form input[type="text"]:focus {
+        border-color: #ff9900; /* Change border color on focus */
+        outline: none; /* Remove default outline */
+    }
+
+    /* Logout button style (same as search button) */
+    .logout-button {
+        background: linear-gradient(to bottom, #ffcc00, #ff9900);
+        color: #333;
+        border: none;
+        padding: 6px 15px;
+        cursor: pointer;
+        border-radius: 15px;
+        font-size: 14px;
+        transition: all 0.3s ease-in-out;
+        border: 2px solid #333;
+        position: relative;
+    }
+
+    .logout-button:hover {
+        transform: scale(1.05);
+    }
+
+    .logout-button:after {
+        content: '';
+        position: absolute;
+        right: -15px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 15px;
+        height: 15px;
+        background: #fff;
+        border: 2px solid #333;
+        border-radius: 50%;
+    }
+</style>
+
+
